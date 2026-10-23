@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b0d12"><title>DOVARO Business Manager</title>
+<link rel="manifest" href="manifest.json">
+<style>
+*{box-sizing:border-box}
+:root{--ink:#f8fafc;--muted:#b8c0ce;--bg:#0b0d12;--panel:#151922;--line:#2d3442;--gold:#d7b56d;--gold2:#f2d99b}
+body{margin:0;font-family:system-ui,-apple-system,"Noto Sans Bengali",sans-serif;background:radial-gradient(ellipse at top,#1b202b 0,#0b0d12 48%);color:var(--ink)}
+header{background:linear-gradient(120deg,#090a0d,#191d26 68%,#332918);color:white;padding:22px 17px;border-bottom:1px solid #4c4027}
+header h1{margin:0;letter-spacing:4px;font-size:28px}header p{margin:5px 0 0;color:#d7c69e;font-size:13px}
+main{max-width:1080px;margin:auto;padding:14px}.hidden{display:none!important}
+.box,.metric{background:linear-gradient(145deg,#171b24,#11141b);border:1px solid var(--line);border-radius:16px;padding:15px;margin:12px 0;box-shadow:0 8px 28px #0003}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.metric{margin:0;border-color:#373226;background:linear-gradient(145deg,#1c2028,#13161c)}.metric small{color:var(--muted)}.metric strong{display:block;font-size:20px;margin-top:7px;color:var(--gold2);overflow-wrap:anywhere}
+.tabs{display:flex;gap:7px;overflow:auto;padding:9px 0;position:sticky;top:0;background:#0b0d12ed;backdrop-filter:blur(12px);z-index:3}
+.tabs button,button{border:1px solid #353b47;border-radius:10px;padding:10px 13px;font-weight:650;cursor:pointer;background:#222833;color:#f3f4f6}
+.tabs button{white-space:nowrap;flex-shrink:0}.tabs button.active,button.primary{background:linear-gradient(135deg,#e7c77f,#b68a3e);color:#17130a;border-color:#e7c77f}
+button.danger{background:#3b2024;color:#ffb5b5;border-color:#633239}
+label{font-size:12px;color:#c0c7d3;display:block;margin-bottom:5px}
+input,select{width:100%;padding:11px;border:1px solid #3a4250;border-radius:9px;font:inherit;background:#0f1218;color:#f8fafc}
+input:focus,select:focus{outline:2px solid #b68a3e;border-color:#e7c77f}
+form .grid{margin-bottom:12px}.wide{grid-column:1/-1}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.row{display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid #2b303a;padding:11px 0}.row:last-child{border-bottom:0}
+.row small{display:block;color:var(--muted);margin-top:4px}.right{text-align:right}.muted{color:var(--muted);font-size:13px;line-height:1.55}
+.status{padding:10px 12px;border-radius:9px;background:#252b38;color:#e2d3aa;font-size:13px;margin:10px 0;border:1px solid #373226}
+.good{background:#142d25;color:#92efc4;border-color:#24533f}.bad{background:#3a2024;color:#ffb5b5;border-color:#633239}
+.section{display:none}.section.active{display:block}.section h2{font-size:17px;margin:0 0 12px;color:var(--gold2)}
+.empty{padding:18px;text-align:center;color:var(--muted)}.smallbtn{font-size:12px;padding:6px 8px;margin-top:5px}
+@media(min-width:650px){.cards{grid-template-columns:repeat(4,minmax(0,1fr))}.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<header><h1>DOVARO</h1><p>BUSINESS MANAGER · হিসাব • স্টক • পার্টনার অ্যাকাউন্ট</p><p style="color:#f2d99b;font-size:12px;margin-top:7px">SIAM &amp; NAYEEM · Crafted for extraordinary business</p></header>
+<main>
+<div id="setup" class="box">
+<h2>প্রথমবার সেটআপ</h2>
+<p class="muted">এই অ্যাপটি দুই ডিভাইসে একই হিসাব দেখাতে Supabase অনলাইন ডাটাবেস ব্যবহার করে। নিচে Supabase Project URL ও anon/publishable key বসিয়ে Save করো। এগুলো Supabase Project Settings → API থেকে পাওয়া যায়।</p>
+<div class="grid"><div class="wide"><label>Supabase Project URL</label><input id="sbUrl" placeholder="https://xxxx.supabase.co"></div><div class="wide"><label>Supabase Publishable / anon key</label><input id="sbKey" placeholder="eyJ..."></div></div>
+<div class="actions"><button class="primary" id="saveConfig">কনফিগারেশন সেভ</button><button id="editConfig">কনফিগারেশন বদলাও</button></div>
+<div id="configMsg" class="status">প্রথমে SQL ফাইলের নির্দেশনা অনুযায়ী ডাটাবেস তৈরি করতে হবে।</div>
+</div>
+<div id="auth" class="box hidden"><h2>লগইন / অ্যাকাউন্ট তৈরি</h2><p class="muted">তুমি ও তোমার পার্টনার দুজনের আলাদা ইমেইল ও পাসওয়ার্ড হবে, কিন্তু একই Business ID ব্যবহার করবে।</p>
+<form id="authForm"><div class="grid"><div class="wide"><label>ইমেইল</label><input name="email" type="email" required autocomplete="username"></div><div class="wide"><label>পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)</label><input name="password" type="password" minlength="6" required autocomplete="current-password"></div></div><div class="actions"><button class="primary" type="submit">লগইন</button><button type="button" id="signup">নতুন অ্যাকাউন্ট তৈরি</button></div></form><div id="authMsg" class="status"></div></div>
+<div id="app" class="hidden">
+<div class="box"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><strong id="userEmail"></strong><div class="muted">DOVARO shared business</div></div><button id="logout">লগআউট</button></div><div id="businessStatus" class="status"></div><div class="grid"><div class="wide"><label>Business ID (তুমি ও পার্টনারের একই হতে হবে)</label><input id="businessId" placeholder="নিজেদের গোপন ID তৈরি করো"></div><div><label>তোমার নাম</label><input id="displayName" placeholder="Siam"></div></div><div class="actions"><button class="primary" id="joinBusiness">Business ID সেভ / যুক্ত হও</button><button id="refresh">রিফ্রেশ</button></div></div>
+<nav class="tabs"><button class="active" data-tab="dashboard">ড্যাশবোর্ড</button><button data-tab="products">পণ্য/স্টক</button><button data-tab="sales">বিক্রি</button><button data-tab="purchases">ক্রয়</button><button data-tab="expenses">খরচ</button><button data-tab="dues">পাওনা</button><button data-tab="partners">মূলধন/উত্তোলন</button><button data-tab="reports">রিপোর্ট</button></nav>
+<section id="dashboard" class="section active"><div class="cards"><div class="metric"><small>মোট বিক্রি</small><strong id="mSales">৳0</strong></div><div class="metric"><small>মোট ক্রয়</small><strong id="mPurchases">৳0</strong></div><div class="metric"><small>অন্যান্য খরচ</small><strong id="mExpenses">৳0</strong></div><div class="metric"><small>আনুমানিক লাভ*</small><strong id="mProfit">৳0</strong></div><div class="metric"><small>স্টক (পিস)</small><strong id="mStock">0</strong></div><div class="metric"><small>পাওনা</small><strong id="mDue">৳0</strong></div><div class="metric"><small>পার্টনার মূলধন</small><strong id="mCapital">৳0</strong></div><div class="metric"><small>পার্টনার উত্তোলন</small><strong id="mWithdraw">৳0</strong></div></div><div class="box"><h2>সাম্প্রতিক লেনদেন</h2><div id="recent"></div><p class="muted">*প্রাথমিক লাভের হিসাব = বিক্রি − ক্রয় − অন্যান্য খরচ। প্রকৃত লাভের জন্য বিক্রি হওয়া পণ্যের ক্রয়মূল্য/COGS আলাদা করে হিসাব করা প্রয়োজন।</p></div></section>
+<section id="products" class="section"><div class="box"><h2>স্টক যোগ করুন</h2><form id="productForm"><div class="grid"><div><label>পণ্যের নাম</label><input name="name" required placeholder="Hoodie"></div><div><label>সাইজ</label><select name="size"><option>XS</option><option>S</option><option selected>M</option><option>L</option><option>XL</option><option>XXL</option><option>Free Size</option></select></div><div><label>রং</label><input name="color" placeholder="Black"></div><div><label>পরিমাণ (পিস)</label><input name="qty" type="number" min="1" required></div><div><label>প্রতি পিস ক্রয় মূল্য</label><input name="cost" type="number" min="0" step=".01" required></div><div><label>প্রতি পিস বিক্রয় মূল্য</label><input name="price" type="number" min="0" step=".01" required></div></div><button class="primary">স্টক সেভ</button></form></div><div class="box"><h2>বর্তমান স্টক</h2><div id="productList"></div></div></section>
+<section id="sales" class="section"><div class="box"><h2>নতুন বিক্রি</h2><form id="saleForm"><div class="grid"><div><label>তারিখ</label><input name="date" type="date" required></div><div><label>পণ্য/ভ্যারিয়েন্ট</label><select name="product_id" id="saleProduct" required></select></div><div><label>পরিমাণ</label><input name="qty" type="number" min="1" required></div><div><label>একক বিক্রয় মূল্য</label><input name="price" type="number" min="0" step=".01" required></div><div><label>কাস্টমার</label><input name="person" placeholder="নাম/অর্ডার"></div><div><label>পেমেন্ট</label><select name="payment"><option value="paid">পরিশোধিত</option><option value="due">বাকি</option></select></div><div class="wide"><label>নোট</label><input name="note"></div></div><button class="primary">বিক্রি সেভ</button></form></div><div class="box"><h2>বিক্রির তালিকা</h2><div id="salesList"></div></div></section>
+<section id="purchases" class="section"><div class="box"><h2>ক্রয়ের হিসাব</h2><form id="purchaseForm"><div class="grid"><div><label>তারিখ</label><input name="date" type="date" required></div><div><label>পণ্য</label><input name="product" required placeholder="Hoodie / Fabric"></div><div><label>পরিমাণ (পিস)</label><input name="qty" type="number" min="1" required></div><div><label>একক ক্রয় মূল্য</label><input name="price" type="number" min="0" step=".01" required></div><div><label>সাপ্লায়ার</label><input name="person"></div><div><label>নোট</label><input name="note"></div></div><button class="primary">ক্রয় সেভ</button></form></div><div class="box"><div id="purchasesList"></div></div></section>
+<section id="expenses" class="section"><div class="box"><h2>নতুন খরচ</h2><form id="expenseForm"><div class="grid"><div><label>তারিখ</label><input name="date" type="date" required></div><div><label>খরচের ধরন</label><select name="category"><option>Packaging</option><option>Delivery</option><option>Marketing</option><option>Rent</option><option>Salary</option><option>Other</option></select></div><div><label>টাকা (৳)</label><input name="amount" type="number" min="0" step=".01" required></div><div><label>কাকে/কোথায়</label><input name="person"></div><div class="wide"><label>বিবরণ</label><input name="note"></div></div><button class="primary">খরচ সেভ</button></form></div><div class="box"><div id="expensesList"></div></div></section>
+<section id="dues" class="section"><div class="box"><h2>কাস্টমারের পাওনা</h2><form id="dueForm"><div class="grid"><div><label>তারিখ</label><input name="date" type="date" required></div><div><label>কাস্টমার</label><input name="person" required></div><div><label>মোবাইল</label><input name="phone"></div><div><label>টাকা (৳)</label><input name="amount" type="number" min="1" step=".01" required></div><div class="wide"><label>বিবরণ</label><input name="note"></div></div><button class="primary">পাওনা সেভ</button></form></div><div class="box"><div id="duesList"></div></div></section>
+<section id="partners" class="section"><div class="box"><h2>পার্টনারের মূলধন / উত্তোলন</h2><form id="partnerForm"><div class="grid"><div><label>তারিখ</label><input name="date" type="date" required></div><div><label>ধরন</label><select name="kind"><option value="capital">মূলধন জমা</option><option value="withdrawal">ব্যক্তিগত উত্তোলন</option></select></div><div><label>পার্টনারের নাম</label><input name="person" required></div><div><label>টাকা (৳)</label><input name="amount" type="number" min="1" step=".01" required></div><div class="wide"><label>নোট</label><input name="note"></div></div><button class="primary">এন্ট্রি সেভ</button></form></div><div class="box"><div id="partnersList"></div></div></section>
+<section id="reports" class="section"><div class="box"><h2>রিপোর্ট ও ব্যাকআপ</h2><p class="muted">CSV ফাইল Excel/Sheets-এ খোলা যাবে। JSON backup নিরাপদে রাখো।</p><div class="actions"><button class="primary" id="csv">CSV Export</button><button id="json">JSON Export</button><input id="importFile" type="file" accept=".json" hidden><button id="import">JSON Import</button></div><div id="reportMsg" class="status"></div></div></section>
+</div>
+</main>
+<script>
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+let sb=null,user=null,business=null,rows={products:[],sales:[],purchases:[],expenses:[],dues:[],partner_entries:[]};
+const tables=Object.keys(rows),today=()=>new Date().toISOString().slice(0,10),money=n=>'৳'+Number(n||0).toLocaleString('en-BD',{maximumFractionDigits:2}),n=v=>Number(v)||0;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function msg(id,t,good=false){$(id).textContent=t;$(id).className='status '+(good?'good':'')}
+function cfg(){return JSON.parse(localStorage.getItem('dovaro_sb_config')||'{}')}
+function show(id,on){$(id).classList.toggle('hidden',!on)}
+function init(){let c=cfg();$('#sbUrl').value=c.url||'';$('#sbKey').value=c.key||'';if(c.url&&c.key){try{sb=supabase.createClient(c.url,c.key);show('#auth',true);show('#setup',false);checkSession()}catch(e){msg('#configMsg','Project URL/key যাচাই করো')}}}
+$('#saveConfig').onclick=()=>{let url=$('#sbUrl').value.trim(),key=$('#sbKey').value.trim();if(!url.startsWith('https://')||!key){msg('#configMsg','সঠিক Project URL ও publishable/anon key দাও');return}localStorage.setItem('dovaro_sb_config',JSON.stringify({url,key}));location.reload()};
+$('#editConfig').onclick=()=>{show('#setup',true);show('#auth',false)};
+async function checkSession(){let {data,error}=await sb.auth.getSession();if(error)msg('#authMsg',error.message);if(data.session){user=data.session.user;afterLogin()}else{show('#auth',true);show('#app',false)}}
+$('#authForm').onsubmit=async e=>{e.preventDefault();let f=Object.fromEntries(new FormData(e.target));let {data,error}=await sb.auth.signInWithPassword({email:f.email,password:f.password});if(error)msg('#authMsg',error.message);else{user=data.user;afterLogin()}};
+$('#signup').onclick=async()=>{let f=Object.fromEntries(new FormData($('#authForm')));if(!f.email||!f.password||f.password.length<6){msg('#authMsg','ইমেইল ও কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড দাও');return}let {data,error}=await sb.auth.signUp({email:f.email,password:f.password});if(error)msg('#authMsg',error.message);else msg('#authMsg','অ্যাকাউন্ট তৈরি হয়েছে। ইমেইল confirmation চাইলে ইমেইল verify করে তারপর লগইন করো।',true)};
+async function afterLogin(){show('#auth',false);show('#app',true);$('#userEmail').textContent=user.email||'';let {data,error}=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();if(error){msg('#businessStatus','ডাটাবেস সেটআপ সম্পূর্ণ হয়নি: '+error.message);return}if(data){business=data.business_id;$('#businessId').value=business||'';$('#displayName').value=data.display_name||''}await loadAll()}
+$('#logout').onclick=async()=>{await sb.auth.signOut();location.reload()};
+$('#joinBusiness').onclick=async()=>{let bid=$('#businessId').value.trim(),name=$('#displayName').value.trim();if(!bid){msg('#businessStatus','Business ID লিখো');return}let {error}=await sb.from('profiles').upsert({id:user.id,business_id:bid,display_name:name,email:user.email},{onConflict:'id'});if(error){msg('#businessStatus','সেভ হয়নি: '+error.message);return}business=bid;msg('#businessStatus','Business ID সেভ হয়েছে। পার্টনারকেও হুবহু একই ID দিতে হবে।',true);await loadAll()};
+$('#refresh').onclick=loadAll;
+async function loadAll(){if(!sb||!user)return;let {data:p}=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();if(!p||!p.business_id){msg('#businessStatus','উপরের Business ID সেট করে “সেভ / যুক্ত হও” চাপো।');return}business=p.business_id;let errs=[];for(let t of tables){let {data,error}=await sb.from(t).select('*').eq('business_id',business).order('created_at',{ascending:false});if(error){errs.push(t+': '+error.message);rows[t]=[]}else rows[t]=data||[]}msg('#businessStatus',errs.length?'কিছু টেবিল লোড হয়নি: '+errs.join(' | '):'অনলাইন ডাটাবেস সংযুক্ত • একই Business ID ব্যবহারকারী সদস্যদের সাথে শেয়ার হচ্ছে',!errs.length);render()}
+async function insert(table,obj){if(!business){alert('আগে Business ID সেভ করো');return}let {error}=await sb.from(table).insert({...obj,business_id:business,created_by:user.id});if(error){alert('সেভ হয়নি: '+error.message);return}await loadAll();alert('সেভ হয়েছে')}
+function form(id,table,map){$('#'+id).onsubmit=async e=>{e.preventDefault();let f=Object.fromEntries(new FormData(e.target));await map(f);e.target.reset();let d=e.target.querySelector('[name=date]');if(d)d.value=today()}}
+$$('input[type=date]').forEach(x=>x.value=today());
+form('productForm','products',async f=>insert('products',{name:f.name,size:f.size,color:f.color,qty:n(f.qty),cost:n(f.cost),price:n(f.price)}));
+form('saleForm','sales',async f=>{let p=rows.products.find(x=>x.id===f.product_id);if(!p){alert('পণ্য বেছে নাও');return}let qty=n(f.qty);if(qty>p.qty){alert('স্টকে যথেষ্ট পণ্য নেই');return}await insert('sales',{date:f.date,product_id:p.id,product_name:p.name,size:p.size,color:p.color,qty,price:n(f.price),amount:qty*n(f.price),person:f.person,payment:f.payment,note:f.note});});
+form('purchaseForm','purchases',async f=>insert('purchases',{date:f.date,product:f.product,qty:n(f.qty),price:n(f.price),amount:n(f.qty)*n(f.price),person:f.person,note:f.note}));
+form('expenseForm','expenses',async f=>insert('expenses',{date:f.date,category:f.category,amount:n(f.amount),person:f.person,note:f.note}));
+form('dueForm','dues',async f=>insert('dues',{date:f.date,person:f.person,phone:f.phone,amount:n(f.amount),paid:0,note:f.note}));
+form('partnerForm','partner_entries',async f=>insert('partner_entries',{date:f.date,kind:f.kind,person:f.person,amount:n(f.amount),note:f.note}));
+function total(a,fn){return a.reduce((s,x)=>s+fn(x),0)}
+async function remove(table,id){if(!confirm('এই এন্ট্রি মুছবে?'))return;let {error}=await sb.from(table).delete().eq('id',id).eq('business_id',business);if(error)alert(error.message);else loadAll()}
+function list(id,arr,make){$(id).innerHTML=arr.length?arr.map(make).join(''):'<div class="empty">এখনও কোনো তথ্য নেই</div>'}
+function item(title,sub,amount,table,x){return `<div class="row"><div><strong>${esc(title)}</strong><small>${esc(sub||'')}</small></div><div class="right"><strong>${money(amount)}</strong><br><button class="danger smallbtn" onclick="remove('${table}','${x.id}')">মুছুন</button></div></div>`}
+function render(){let sales=total(rows.sales,x=>n(x.amount)),purchases=total(rows.purchases,x=>n(x.amount)),expenses=total(rows.expenses,x=>n(x.amount)),due=total(rows.dues,x=>Math.max(0,n(x.amount)-n(x.paid))),capital=total(rows.partner_entries.filter(x=>x.kind==='capital'),x=>n(x.amount)),withdraw=total(rows.partner_entries.filter(x=>x.kind==='withdrawal'),x=>n(x.amount));
+$('#mSales').textContent=money(sales);$('#mPurchases').textContent=money(purchases);$('#mExpenses').textContent=money(expenses);$('#mProfit').textContent=money(sales-purchases-expenses);$('#mStock').textContent=rows.products.reduce((s,x)=>s+n(x.qty),0);$('#mDue').textContent=money(due);$('#mCapital').textContent=money(capital);$('#mWithdraw').textContent=money(withdraw);
+list('#productList',rows.products,x=>item(`${x.name} • ${x.size} • ${x.color||'রং নেই'}`,`স্টক ${x.qty} পিস • ক্রয় ${money(x.cost)} • বিক্রি ${money(x.price)}`,n(x.qty)*n(x.cost),'products',x));
+$('#saleProduct').innerHTML='<option value="">পণ্য বেছে নাও</option>'+rows.products.map(x=>`<option value="${x.id}">${esc(x.name)} / ${esc(x.size)} / ${esc(x.color)} (স্টক ${x.qty})</option>`).join('');
+list('#salesList',rows.sales,x=>item(x.product_name,`${x.date} • ${x.qty} পিস • ${x.person||''} • ${x.payment==='due'?'বাকি':'পরিশোধিত'}`,x.amount,'sales',x));
+list('#purchasesList',rows.purchases,x=>item(x.product,`${x.date} • ${x.qty} পিস • ${x.person||''}`,x.amount,'purchases',x));
+list('#expensesList',rows.expenses,x=>item(x.category,`${x.date} • ${x.person||''} • ${x.note||''}`,x.amount,'expenses',x));
+list('#duesList',rows.dues,x=>item(x.person,`${x.date} • ${x.phone||''} • ${x.note||''} • পরিশোধ ${money(x.paid)}`,Math.max(0,n(x.amount)-n(x.paid)),'dues',x));
+list('#partnersList',rows.partner_entries,x=>item(x.person,`${x.date} • ${x.kind==='capital'?'মূলধন জমা':'ব্যক্তিগত উত্তোলন'} • ${x.note||''}`,x.amount,'partner_entries',x));
+let all=[...rows.sales.map(x=>({...x,kind:'বিক্রি',title:x.product_name})),...rows.purchases.map(x=>({...x,kind:'ক্রয়',title:x.product})),...rows.expenses.map(x=>({...x,kind:'খরচ',title:x.category}))].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,8);
+list('#recent',all,x=>`<div class="row"><div><strong>${esc(x.kind)} · ${esc(x.title)}</strong><small>${esc(x.date||'')}</small></div><strong>${money(x.amount)}</strong></div>`);
+$('#reportMsg').textContent=`মোট এন্ট্রি: ${tables.reduce((s,t)=>s+rows[t].length,0)} • Business ID: ${business||'সেট করা হয়নি'}`}
+$$('.tabs button').forEach(b=>b.onclick=()=>{$$('.tabs button').forEach(x=>x.classList.remove('active'));$$('.section').forEach(x=>x.classList.remove('active'));b.classList.add('active');$('#'+b.dataset.tab).classList.add('active')});
+function dl(name,data,type){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
+$('#json').onclick=()=>dl('DOVARO-backup-'+today()+'.json',JSON.stringify(rows,null,2),'application/json');
+$('#csv').onclick=()=>{let arr=[['table','date','name','qty','price','amount','person','note']];tables.forEach(t=>rows[t].forEach(x=>arr.push([t,x.date||'',x.product_name||x.product||x.name||x.category||x.person||'',x.qty||'',x.price||'',x.amount||'',x.person||'',x.note||''])));dl('DOVARO-report-'+today()+'.csv','\ufeff'+arr.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8')};
+$('#import').onclick=()=>$('#importFile').click();
+$('#importFile').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let data=JSON.parse(await f.text());msg('#reportMsg','JSON backup পড়া হয়েছে। এই MVP-তে Import নিরাপত্তার কারণে automatic নয়; পুরোনো ডাটা overwrite ঠেকাতে প্রয়োজনে প্রতিটি টেবিল আলাদাভাবে restore করতে হবে।')}catch{msg('#reportMsg','সঠিক JSON ফাইল নয়')}e.target.value=''};
+init();
+</script></body></html>
